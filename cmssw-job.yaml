@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cmssw-job
+  labels:
+    app: cmssw
+    version: "9_4_4"
+spec:
+  backoffLimit: 3
+  # activeDeadlineSeconds: 300
+  template:
+    spec:
+      containers:
+      - name: cmssw
+        image: cmssw:9_4_4
+        command: ["/bin/zsh", "-c", "source /home/cmsbld/scripts/setup_cmssw.sh && export X509_USER_PROXY=/home/cmsbld/proxy-exchange/x509up && sh /home/cmsbld/scripts/dataset_query.sh > files.txt && sh /home/cmsbld/scripts/run_genXSecAnalyzer.sh >> /home/cmsbld/log/out.txt 2>&1;"]
+        # >> /home/cmsbld/log/out.txt 2>&1
+        # env:
+        # - name: RUN_COMMAND_KEY
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: run-config
+        #       key: RUN_COMMAND
+        # - name: DATASET_KEY
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: run-config
+        #       key: DATASET
+        volumeMounts:
+        # name must match the volume name defined in volume
+        - name: proxy-exchange
+          # mount path within the container
+          mountPath: /home/cmsbld/proxy-exchange
+          readOnly: true
+        - name: scripts
+          mountPath: /home/cmsbld/scripts
+          readOnly: true
+        - name: log
+          mountPath: /home/cmsbld/log
+      initContainers:
+        - name: get-voms-proxy
+          image: cmssw:9_4_4
+          command: ["/bin/zsh", "-c", "source /home/cmsbld/scripts/setup_cmssw.sh && export X509_USER_PROXY=/home/cmsbld/proxy-exchange/x509up && source /home/cmsbld/scripts/get_proxy.sh"]
+          volumeMounts:
+            - name: proxy-exchange
+              # mount path within the container
+              mountPath: /home/cmsbld/proxy-exchange
+            - name: voms-certs
+              mountPath: /home/cmsbld/globus
+              readOnly: true
+            - name: scripts
+              mountPath: /home/cmsbld/scripts
+              readOnly: true
+          env:
+            - name: VOMS_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: voms-proxy-pass
+                  key: password
+      volumes:
+      - name: scripts
+        hostPath:
+          path: /Users/clange/docker/productionChain/cmssw-k8s/scripts
+      - name: log
+        hostPath:
+          path: /Users/clange/docker/productionChain/cmssw-k8s/log
+      - name: proxy-exchange
+        # Creates a new directory that will exist as long as the Pod is running on the node, but it can persist across container failures and restarts.
+        emptyDir: {}
+      - name: voms-certs
+        secret:
+          secretName: voms-proxy-cert
+      # OnFailure
+      restartPolicy: Never
