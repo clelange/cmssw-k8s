@@ -12,7 +12,7 @@ spec:
     spec:
       containers:
       - name: cmssw
-        image: cmssw:9_4_4
+        image: clelange/cmssw:9_4_4
         command: ["/bin/zsh", "-c", "source /home/cmsbld/scripts/setup_cmssw.sh && export X509_USER_PROXY=/home/cmsbld/proxy-exchange/x509up && sh /home/cmsbld/scripts/dataset_query.sh > files.txt && sh /home/cmsbld/scripts/run_genXSecAnalyzer.sh >> /home/cmsbld/log/out.txt 2>&1;"]
         # >> /home/cmsbld/log/out.txt 2>&1
         # env:
@@ -39,7 +39,7 @@ spec:
           mountPath: /home/cmsbld/log
       initContainers:
         - name: get-voms-proxy
-          image: cmssw:9_4_4
+          image: clelange/cmssw:9_4_4
           command: ["/bin/zsh", "-c", "source /home/cmsbld/scripts/setup_cmssw.sh && export X509_USER_PROXY=/home/cmsbld/proxy-exchange/x509up && source /home/cmsbld/scripts/get_proxy.sh"]
           volumeMounts:
             - name: proxy-exchange
